@@ -28,6 +28,18 @@ const router = require("./Router");
 const notFound = require("./Handlers").notFound;
 const config = require("./config");
 
+// const _data = require("./lib/data");
+// // TESTING
+// // @TODO delete this
+// (async () => {
+//     try {
+//         const result = await _data.delete('test', 'newFile2');
+//         console.log("Exit with error? ", result);
+//     } catch (error) {
+//         console.error(error);
+//     }
+// })();
+
 // Unified server logic for both http and https server
 const unifiedServer = async (req, res) => {
 

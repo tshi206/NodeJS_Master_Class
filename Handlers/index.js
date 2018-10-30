@@ -1,13 +1,13 @@
 // Define the handlers
 const handlers = {
 
-    sample: async data => {
+    ping: async data => {
 
         // Return a HTTP status code and a payload object in JSON format
         return {
-            statusCode : 406,
+            statusCode : 200,
             payload : {
-                'name' : 'sample handler'
+                'isAlive' : 'True'
             }
         };
 

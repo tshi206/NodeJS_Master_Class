@@ -16,7 +16,7 @@ const router = {
      *   }
      *
      */
-    "sample" : handlers.sample
+    "ping" : handlers.ping
 };
 
 module.exports = router;

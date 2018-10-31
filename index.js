@@ -24,16 +24,17 @@ const https = require("https");
 const url = require("url");
 const StringDecoder = require('string_decoder').StringDecoder;
 const fs = require("fs");
-const router = require("./Router");
-const notFound = require("./Handlers").notFound;
+const router = require("./lib/Router");
+const notFound = require("./lib/Handlers").notFound;
 const config = require("./config");
+const Helpers = require("./lib/Helpers");
 
 // const _data = require("./lib/data");
 // // TESTING
 // // @TODO delete this
 // (async () => {
 //     try {
-//         const result = await _data.delete('test', 'newFile2');
+//         const result = await _data.read('test', 'newFile2');
 //         console.log("Exit with error? ", result);
 //     } catch (error) {
 //         console.error(error);
@@ -86,7 +87,7 @@ const unifiedServer = async (req, res) => {
         queryStringObject,
         method,
         headers,
-        "payload" : requestPayload
+        "payload" : Helpers.parseJsonToObject(requestPayload)
     };
 
     // Route the request to the chosen handler
@@ -113,7 +114,7 @@ const HTTP_Server = http.createServer(unifiedServer);
 
 // Start the HTTP server
 HTTP_Server.listen(config["httpPort"], () => {
-    console.log(`Server listening on port ${config["httpPort"]} in ${config["envName"]} mode`);
+    console.log(`HTTP Server listening on port ${config["httpPort"]} in ${config["envName"]} mode`);
 });
 
 // Instantiate the HTTPS server
@@ -125,5 +126,5 @@ const HTTPS_Server = https.createServer(httpsServerOptions, unifiedServer);
 
 // Start the HTTPS server
 HTTPS_Server.listen(config["httpsPort"], () => {
-    console.log(`Server listening on port ${config["httpsPort"]} in ${config["envName"]} mode`);
+    console.log(`HTTPS Server listening on port ${config["httpsPort"]} in ${config["envName"]} mode`);
 });

@@ -9,14 +9,16 @@ const environments = {};
 environments.staging = {
     'httpPort' : 3000,
     'httpsPort' : 3001,
-    'envName' : 'staging'
+    'envName' : 'staging',
+    'hashingSecret' : 'this is a secret'
 };
 
 // Production environment
 environments.production = {
     'httpPort' : 80,
     'httpsPort' : 443,
-    'envName' : 'production'
+    'envName' : 'production',
+    'hashingSecret' : 'the red fox jumps over a lazy dog'
 };
 
 // Determine which environment was passed as a command line argument

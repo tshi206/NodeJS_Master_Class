@@ -10,7 +10,8 @@ environments.staging = {
     'httpPort' : 3000,
     'httpsPort' : 3001,
     'envName' : 'staging',
-    'hashingSecret' : 'this is a secret'
+    'hashingSecret' : 'this is a secret',
+    'maxChecks' : 5
 };
 
 // Production environment
@@ -18,7 +19,8 @@ environments.production = {
     'httpPort' : 80,
     'httpsPort' : 443,
     'envName' : 'production',
-    'hashingSecret' : 'the red fox jumps over a lazy dog'
+    'hashingSecret' : 'the red fox jumps over a lazy dog',
+    'maxChecks' : 5
 };
 
 // Determine which environment was passed as a command line argument

@@ -41,6 +41,15 @@ const Helpers = require("./lib/Helpers");
 //     }
 // })();
 
+// // @TODO GET RID OF THIS
+// (async () => {
+//     try {
+//         await Helpers.sendTwilioSms("4158375309", "Hello World")
+//     } catch (e) {
+//         console.error("this was the error from Twilio ", e)
+//     }
+// })();
+
 // Unified server logic for both http and https server
 const unifiedServer = async (req, res) => {
 

@@ -32,7 +32,8 @@ class App {
             try {
                 // Start the workers
                 await workers.init();
-                console.log("Workers status: running")
+                // Send log to console in blue
+                console.log("\x1b[36m%s\x1b[0m", "Workers status: running")
             } catch (e) {
                 console.error(e);
                 console.error("Workers status: terminated with error")

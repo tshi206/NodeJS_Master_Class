@@ -138,8 +138,10 @@ app.bindForms = function() {
                     }
                 }
             }
+            // If the method is DELETE, the payload should be a queryStringObject instead
+            const queryStringObject = method === 'DELETE' ? payload : {};
             // Call the API
-            const response = await app.client.request(undefined, path, method, undefined, payload, true);
+            const response = await app.client.request(undefined, path, method, queryStringObject, payload, true);
             // Display an error on the form if needed
             if(response.statusCode !== 200){
                 // Try to get the error from the api, or set a default error message and then set the formError field with the error text
@@ -188,6 +190,11 @@ app.formResponseProcessor = async (formId,requestPayload,responsePayload) => {
     const formsWithSuccessMessages = ['accountEdit1', 'accountEdit2'];
     if(formsWithSuccessMessages.includes(formId)){
         document.querySelector("#"+formId+" .formSuccess").style.display = 'block';
+    }
+    // If the user just deleted their account, redirect them to the account-delete page
+    if(formId === 'accountEdit3'){
+        app.logUserOut(false);
+        window.location = '/account/deleted';
     }
 };
 

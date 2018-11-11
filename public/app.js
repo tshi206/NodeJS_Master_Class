@@ -114,40 +114,44 @@ app.logUserOut = async () => {
 // Bind the forms
 app.bindForms = function() {
     if (!document.querySelector("form")) return;
-    document.querySelector("form").addEventListener("submit", async function(e) {
-
-        // Stop it from submitting
-        e.preventDefault();
-        const formId = this.id;
-        const path = this.action;
-        const method = this.method.toUpperCase();
-
-        // Hide the error message (if it's currently shown due to a previous error)
-        document.querySelector("#"+formId+" .formError").style.display = 'hidden';
-
-        // Turn the inputs into a payload
-        const payload = {};
-        const elements = this.elements;
-        for(let i = 0; i < elements.length; i++){
-            if(elements[i].type !== 'submit'){
-                payload[elements[i].name] = elements[i].type === 'checkbox' ? elements[i].checked : elements[i].value;
+    document.querySelectorAll("form").forEach(form => {
+        form.addEventListener("submit", async function(e) {
+            // Stop it from submitting
+            e.preventDefault();
+            const formId = this.id;
+            const path = this.action;
+            let method = this.method.toUpperCase();
+            // Hide the error message (if it's currently shown due to a previous error)
+            if(document.querySelector("#"+formId+" .formError")) document.querySelector("#"+formId+" .formError").style.display = 'none';
+            // Hide the success message (if it's currently shown due to a previous success)
+            if(document.querySelector("#"+formId+" .formSuccess")) document.querySelector("#"+formId+" .formSuccess").style.display = 'none';
+            // Turn the inputs into a payload
+            const payload = {};
+            const elements = this.elements;
+            for(let i = 0; i < elements.length; i++){
+                if(elements[i].type !== 'submit'){
+                    const valueOfElement = elements[i].type === 'checkbox' ? elements[i].checked : elements[i].value;
+                    if(elements[i].name === '_method'){
+                        method = valueOfElement;
+                    } else {
+                        payload[elements[i].name] = valueOfElement;
+                    }
+                }
             }
-        }
-
-        // Call the API
-        const response = await app.client.request(undefined, path, method, undefined, payload, true);
-        // Display an error on the form if needed
-        if(response.statusCode !== 200){
-            // Try to get the error from the api, or set a default error message and then set the formError field with the error text
-            document.querySelector("#"+formId+" .formError").innerHTML = typeof(response.parsedResponse.Error) === 'string' ? response.parsedResponse.Error : 'An error has occurred, please try again';
-            // Show (unhide) the form error field on the form
-            document.querySelector("#"+formId+" .formError").style.display = 'block';
-
-        } else {
-            // If successful, send to form response processor
-            await app.formResponseProcessor(formId,payload,response.parsedResponse);
-        }
-    });
+            // Call the API
+            const response = await app.client.request(undefined, path, method, undefined, payload, true);
+            // Display an error on the form if needed
+            if(response.statusCode !== 200){
+                // Try to get the error from the api, or set a default error message and then set the formError field with the error text
+                document.querySelector("#"+formId+" .formError").innerHTML = typeof(response.parsedResponse.Error) === 'string' ? response.parsedResponse.Error : 'An error has occurred, please try again';
+                // Show (unhide) the form error field on the form
+                document.querySelector("#"+formId+" .formError").style.display = 'block';
+            } else {
+                // If successful, send to form response processor
+                await app.formResponseProcessor(formId,payload,response.parsedResponse);
+            }
+        })
+    })
 };
 
 // Form response processor
@@ -164,10 +168,8 @@ app.formResponseProcessor = async (formId,requestPayload,responsePayload) => {
         const {statusCode, parsedResponse} = await app.client.request(undefined, 'api/tokens', 'POST', undefined, newPayload, true);
         // Display an error on the form if needed
         if(statusCode !== 200){
-
             // Set the formError field with the error text
             document.querySelector("#"+formId+" .formError").innerHTML = 'Sorry, an error has occurred. Please try again.';
-
             // Show (unhide) the form error field on the form
             document.querySelector("#"+formId+" .formError").style.display = 'block';
 
@@ -181,6 +183,11 @@ app.formResponseProcessor = async (formId,requestPayload,responsePayload) => {
     if(formId === 'sessionCreate'){
         app.setSessionToken(responsePayload);
         window.location = '/checks/all';
+    }
+    // If account setting forms saved successfully and they have success messages, show them
+    const formsWithSuccessMessages = ['accountEdit1', 'accountEdit2'];
+    if(formsWithSuccessMessages.includes(formId)){
+        document.querySelector("#"+formId+" .formSuccess").style.display = 'block';
     }
 };
 
@@ -260,6 +267,45 @@ app.tokenRenewalLoop = () => {
     },1000 * 60);
 };
 
+// Load data on the page
+app.loadDataOnPage = () => {
+    // Get the current page from the body class
+    const bodyClasses = document.querySelector("body").classList;
+    const primaryClass = typeof(bodyClasses[0]) === 'string' ? bodyClasses[0] : false;
+    // Logic for account settings page
+    if(primaryClass === 'accountEdit'){
+        (async () => await app.loadAccountEditPage())();
+    }
+};
+
+// Load the account edit page specifically
+app.loadAccountEditPage = async () => {
+    // Get the phone number from the current token, or log the user out if none is there
+    const phone = typeof(app.config.sessionToken.phone) === 'string' ? app.config.sessionToken.phone : false;
+    if(phone){
+        // Fetch the user data
+        const queryStringObject = {
+            'phone': phone
+        };
+        const {statusCode, parsedResponse} = await app.client.request(undefined,'api/users','GET',queryStringObject,undefined,true);
+        if(statusCode === 200){
+            // Put the data into the forms as values where needed
+            document.querySelector("#accountEdit1 .firstNameInput").value = parsedResponse.firstName;
+            document.querySelector("#accountEdit1 .lastNameInput").value = parsedResponse.lastName;
+            document.querySelector("#accountEdit1 .displayPhoneInput").value = parsedResponse.phone;
+            // Put the hidden phone field into both forms
+            document.querySelectorAll("input.hiddenPhoneNumberInput").forEach(hiddenPhoneInput => {
+                hiddenPhoneInput.value = parsedResponse.phone;
+            })
+        } else {
+            // If the request comes back as something other than 200, log the user our (on the assumption that the api is temporarily down or the users token is bad)
+            await app.logUserOut();
+        }
+    } else {
+        await app.logUserOut();
+    }
+};
+
 // Init (bootstrapping)
 app.init = () => {
 
@@ -274,6 +320,9 @@ app.init = () => {
 
     // Renew token
     app.tokenRenewalLoop();
+
+    // Load data on page
+    app.loadDataOnPage();
 
 };
 

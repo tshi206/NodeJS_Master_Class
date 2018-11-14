@@ -140,9 +140,9 @@ app.bindForms = function() {
                         method = valueOfElement;
                     } else {
                         // Create an payload field named "method" if the elements name is actually httpmethod
-                        if(nameOfElement === 'httpmethod'){
-                            nameOfElement = 'method';
-                        }
+                        if(nameOfElement === 'httpmethod') nameOfElement = 'method';
+                        // Create an payload field named "id" if the elements name is actually uid
+                        if(nameOfElement === 'uid') nameOfElement = 'id';
                         // If the element has the class "multiselect" add its value(s) as array elements
                         if(classOfElement.indexOf('multiselect') > -1){
                             if(elementIsChecked){
@@ -203,7 +203,7 @@ app.formResponseProcessor = async (formId,requestPayload,responsePayload) => {
         window.location = '/checks/all';
     }
     // If account setting forms saved successfully and they have success messages, show them
-    const formsWithSuccessMessages = ['accountEdit1', 'accountEdit2'];
+    const formsWithSuccessMessages = ['accountEdit1', 'accountEdit2', 'checksEdit1'];
     if(formsWithSuccessMessages.includes(formId)){
         document.querySelector("#"+formId+" .formSuccess").style.display = 'block';
     }
@@ -213,9 +213,9 @@ app.formResponseProcessor = async (formId,requestPayload,responsePayload) => {
         window.location = '/account/deleted';
     }
     // If the user just created a new check successfully, redirect back to the dashboard
-    if(formId === 'checksCreate'){
-        window.location = '/checks/all';
-    }
+    if(formId === 'checksCreate') window.location = '/checks/all';
+    // If the user just deleted a check, redirect them to the dashboard
+    if(formId === 'checksEdit2') window.location = '/checks/all'
 };
 
 // Get the session token from local storage and set it in the app.config object
@@ -303,6 +303,8 @@ app.loadDataOnPage = () => {
     if(primaryClass === 'accountEdit') (async () => await app.loadAccountEditPage())();
     // Logic for dashboard page
     if(primaryClass === 'checksList') (async () => await app.loadChecksListPage())();
+    // Logic for check details page
+    if(primaryClass === 'checksEdit') (async () => await app.loadChecksEditPage())()
 };
 
 // Load the account edit page specifically
@@ -339,7 +341,7 @@ app.loadChecksListPage = async () => {
     const phone = typeof(app.config.sessionToken.phone) === 'string' ? app.config.sessionToken.phone : false;
     if(phone){
         // Fetch the user data
-        const queryStringObject = { 'phone': phone };
+        const queryStringObject = { phone };
         const {statusCode, parsedResponse} = await app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, true);
         if(statusCode === 200){
             // Determine how many checks the user has
@@ -385,6 +387,37 @@ app.loadChecksListPage = async () => {
         }
     } else {
         app.logUserOut();
+    }
+};
+
+// Load the checks edit page specifically
+app.loadChecksEditPage = async () => {
+    // Get the check id from the query string, if none is found then redirect back to dashboard
+    const id = typeof(window.location.href.split('=')[1]) === 'string' && window.location.href.split('=')[1].length > 0 ? window.location.href.split('=')[1] : false;
+    if(id){
+        // Fetch the check data
+        const queryStringObject = { id };
+        const {statusCode, parsedResponse} = await app.client.request(undefined, 'api/checks', 'GET', queryStringObject, undefined, true);
+        if(statusCode === 200){
+            let i;
+// Put the hidden id field into both forms
+            const hiddenIdInputs = document.querySelectorAll("input.hiddenIdInput");
+            for(i = 0; i < hiddenIdInputs.length; i++) hiddenIdInputs[i].value = parsedResponse.id;
+            // Put the data into the top form as values where needed
+            document.querySelector("#checksEdit1 .displayIdInput").value = parsedResponse.id;
+            document.querySelector("#checksEdit1 .displayStateInput").value = parsedResponse.state;
+            document.querySelector("#checksEdit1 .protocolInput").value = parsedResponse.protocol;
+            document.querySelector("#checksEdit1 .urlInput").value = parsedResponse.url;
+            document.querySelector("#checksEdit1 .methodInput").value = parsedResponse.method;
+            document.querySelector("#checksEdit1 .timeoutInput").value = parsedResponse.timeoutSeconds;
+            const successCodeCheckboxes = document.querySelectorAll("#checksEdit1 input.successCodesInput");
+            for(i = 0; i < successCodeCheckboxes.length; i++) if(parsedResponse.successCodes.indexOf(parseInt(successCodeCheckboxes[i].value)) > -1) successCodeCheckboxes[i].checked = true
+        } else {
+            // If the request comes back as something other than 200, redirect back to dashboard
+            window.location = '/checks/all';
+        }
+    } else {
+        window.location = '/checks/all';
     }
 };
 

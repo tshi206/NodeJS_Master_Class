@@ -175,7 +175,6 @@ app.bindForms = function() {
 
 // Form response processor
 app.formResponseProcessor = async (formId,requestPayload,responsePayload) => {
-    const functionToCall = false;
     // If account creation was successful, try to immediately log the user in
     if(formId === 'accountCreate'){
         // Take the phone and password, and use it to log the user in
@@ -301,9 +300,9 @@ app.loadDataOnPage = () => {
     const bodyClasses = document.querySelector("body").classList;
     const primaryClass = typeof(bodyClasses[0]) === 'string' ? bodyClasses[0] : false;
     // Logic for account settings page
-    if(primaryClass === 'accountEdit'){
-        (async () => await app.loadAccountEditPage())();
-    }
+    if(primaryClass === 'accountEdit') (async () => await app.loadAccountEditPage())();
+    // Logic for dashboard page
+    if(primaryClass === 'checksList') (async () => await app.loadChecksListPage())();
 };
 
 // Load the account edit page specifically
@@ -331,6 +330,61 @@ app.loadAccountEditPage = async () => {
         }
     } else {
         await app.logUserOut();
+    }
+};
+
+// Load the dashboard page specifically
+app.loadChecksListPage = async () => {
+    // Get the phone number from the current token, or log the user out if none is there
+    const phone = typeof(app.config.sessionToken.phone) === 'string' ? app.config.sessionToken.phone : false;
+    if(phone){
+        // Fetch the user data
+        const queryStringObject = { 'phone': phone };
+        const {statusCode, parsedResponse} = await app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, true);
+        if(statusCode === 200){
+            // Determine how many checks the user has
+            const allChecks = typeof(parsedResponse.checks) === 'object' && parsedResponse.checks instanceof Array && parsedResponse.checks.length > 0 ? parsedResponse.checks : [];
+            if(allChecks.length > 0){
+                // Show each created check as a new row in the table
+                allChecks.forEach(async checkId => {
+                    // Get the data for the check
+                    const newQueryStringObject = { 'id': checkId };
+                    const {statusCode, parsedResponse} = await app.client.request(undefined, 'api/checks', 'GET', newQueryStringObject, undefined, true);
+                    if(statusCode === 200){
+                        // Make the check data into a table row
+                        const table = document.getElementById("checksListTable");
+                        const tr = table.insertRow(-1);
+                        tr.classList.add('checkRow');
+                        const td0 = tr.insertCell(0);
+                        const td1 = tr.insertCell(1);
+                        const td2 = tr.insertCell(2);
+                        const td3 = tr.insertCell(3);
+                        const td4 = tr.insertCell(4);
+                        td0.innerHTML = parsedResponse.method.toUpperCase();
+                        td1.innerHTML = parsedResponse.protocol+'://';
+                        td2.innerHTML = parsedResponse.url;
+                        td3.innerHTML = typeof(parsedResponse.state) === 'string' ? parsedResponse.state : 'unknown';
+                        td4.innerHTML = '<a href="/checks/edit?id='+parsedResponse.id+'">View / Edit / Delete</a>';
+                    } else {
+                        console.log("Error trying to load check ID: ",checkId);
+                    }
+                });
+                if(allChecks.length < 5){
+                    // Show the createCheck CTA
+                    document.getElementById("createCheckCTA").style.display = 'block';
+                }
+            } else {
+                // Show 'you have no checks' message
+                document.getElementById("noChecksMessage").style.display = 'table-row';
+                // Show the createCheck CTA
+                document.getElementById("createCheckCTA").style.display = 'block';
+            }
+        } else {
+            // If the request comes back as something other than 200, log the user our (on the assumption that the api is temporarily down or the users token is bad)
+            app.logUserOut();
+        }
+    } else {
+        app.logUserOut();
     }
 };
 
